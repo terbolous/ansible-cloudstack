@@ -35,17 +35,17 @@ based on the data obtained from CloudStack API:
   "default_ip": "1.2.3.4",
   "nic": [
     {
-      "ip": "10.101.66.1", 
+      "ip": "10.101.66.1",
       "mac": "02:00:46:28:00:02",
       "netmask": "255.255.255.0"
     },
     {
-      "ip": "10.100.9.134", 
+      "ip": "10.100.9.134",
       "mac": "02:00:00:38:06:4c",
       "netmask": "255.255.255.0"
     },
     {
-      "ip": "1.2.3.4", 
+      "ip": "1.2.3.4",
       "mac": "06:0c:fc:00:35:a1",
       "netmask": "255.255.255.128"
     }
@@ -128,7 +128,11 @@ class CloudStackInventory(object):
             if name == router_name:
                 data['zone'] = router['zonename']
                 if 'linklocalip' in router:
-                    data['ansible_ssh_host'] = router['linklocalip']
+                    data['ansible_host'] = router['linklocalip']
+                    data['ansible_port'] = '3922'
+                hostname = router['hostname']
+                data['ansible_ssh_extra_args'] = "-o ProxyCommand='ssh -W %%h:%%p -q -o StrictHostKeyChecking=no root@%s' -o StrictHostKeyChecking no" % hostname
+                    #data['debug'] = router.keys()
                 data['state'] = router['state']
                 data['redundant_state'] = router['redundantstate']
                 if 'account' in router:
@@ -201,6 +205,12 @@ class CloudStackInventory(object):
                 data = self.add_group(data, router['account'], router_name)
 
             data['_meta']['hostvars'][router_name]['ansible_ssh_host'] = router['linklocalip']
+            hostname = router['hostname']
+            data['_meta']['hostvars'][router_name]['ansible_port'] = '3922'
+            data['_meta']['hostvars'][router_name]['ansible_user'] = 'root'
+            data['_meta']['hostvars'][router_name]['ansible_ssh_private_key_file'] = 'id_rsa.cloud'
+            data['_meta']['hostvars'][router_name]['ansible_ssh_extra_args'] = "-o ProxyCommand='ssh -o StrictHostKeyChecking=no -W %%h:%%p -q root@%s' -o StrictHostKeyChecking=no" % hostname
+            data['_meta']['hostvars'][router_name]['ansible_scp_extra_args'] = data['_meta']['hostvars'][router_name]['ansible_ssh_extra_args']
             data['_meta']['hostvars'][router_name]['state'] = router['state']
             if 'redundantstate' in router:
                 data['_meta']['hostvars'][router_name]['redundant_state'] = router['redundantstate']
